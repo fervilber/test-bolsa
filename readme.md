@@ -1,8 +1,9 @@
 # Especializacion en ciencia de datos
 
 Estos son los cursos incluidos en la especializacion:
+vamos a probar mas cambios
 
-  * La caja de herramientas del cient√???fico de datos
+  * La caja de herramientas del cient√fico de datos
   * 2R Programming
   * 3Getting and Cleaning Data
   * 4Exploratory Data Analysis
