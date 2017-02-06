@@ -1,0 +1,188 @@
+---
+title: "Lectura de datos BOLSA"
+author: "Fernando Villalba"
+date: "6 de febrero de 2017"
+output: 
+  html_document: 
+    fig_caption: yes
+    number_sections: yes
+    self_contained: no
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Lectura de datos de bolsa
+
+La forma más sencilla de bajar datos de bolsa es con la librería `tseries` y su funcion `get.hist.quote`
+Veamos como descargar los datos del IBEX 35 en los dos últimos años.
+
+```{r}
+#install.packages("tseries")
+library(tseries)
+library("zoo", lib.loc="~/R/win-library/3.3")
+
+ticker="^IBEX"
+anos= 5*365 # en días si pongo star como fecha no hace falta
+#quote="AdjClose"
+#start= Sys.Date()-anos
+
+acc <- get.hist.quote(instrument= ticker, start= "2010-01-01",end= Sys.Date(), quote="AdjClose",provider="yahoo", origin="1970-01-01", compression="d", retclass="zoo");
+
+difacc<-diff(acc); # dif en numero
+dif100 <-100*difacc/acc; # dif en %
+#calculo la serie acumulada
+acumdif<-cumsum(dif100);
+
+# Para extraer los datos de las fechas y de los datos de una serie zoo
+# podemos usar las funciones index y coredata de zoo
+# coredata(acc) --> extrae los valores de la serie zoo
+# index(acc)--> extrae la serie de indices de fechas 
+
+diasemana<-as.numeric(format(as.Date(index(acc)),"%w"))
+mes<-as.numeric(format(as.Date(index(acc)),"%m"))
+ano<-as.numeric(format(as.Date(index(acc)),"%y"))
+dia<-as.numeric(format(as.Date(index(acc)),"%d"))
+
+#creo un data frame con los datos
+df<-data.frame(index(acc),coredata(acc),diasemana,dia, mes, ano)
+str(df)
+#quito el elemento de la fila 1 ya que las dif tiene un elemento menos 
+df<-df[-1,]
+#añado la dif a la data frame
+df$dif<-as.numeric(coredata(dif100))
+df$acum<-as.numeric(coredata(acumdif))
+
+# con esto tengo una df con 4 variables fecha, cierre, dia de la semana y dif de cierres
+str(df)
+
+# Grafico simpe de la serie temporal
+plot(acc)
+
+```
+
+
+Vamos a pintar las graficas por años
+```{r}
+
+#Pintamos las graficas de cada año juntas
+  rango<-range(df$ano)
+  rangoacum<-range(df$acum)
+    for(i in rango[1]:rango[2]){
+      #i=rango[2]
+      tem<- subset(df$AdjClose,ano==i)
+      tem<-100*diff(tem)/tem[-1]
+      tem<- cumsum(tem)
+      if (i==rango[1]){
+          plot(tem,ylab="% cambio", xlab="dias desde el 1 de enero", type="n", ylim = c(-40,30),xlim = c(0,280))
+          lines(tem, col=i-rango[1]+1)
+      } else {
+          lines(tem, col=i-rango[1]+1)
+      }
+    }
+  abline(h=0)
+  abline(h=10,col="grey",lty=3)
+  abline(h=-10,col="grey",lty=3)
+  title(main="años comparados")
+  legend("topright",legend=c(rango[1]:rango[2]), col=c(1:(rango[2]-rango[1]+1)), lty=1, lwd=2 )
+
+
+```
+
+
+## gráficos 
+
+Con los datos de la serie almacenados en un dataframe, vamos a realizar varios gráficas exploratorios de los mismos:
+
+```{r graficas1}
+library(ggplot2)
+# 1. grafico de frecuencias de la serie de diferencias
+qplot(dif,data=df,fill=as.factor(diasemana))
+
+# 2. histograma de frecuencias por día de la semana
+qplot(dif,data=df, facets = diasemana ~ .,fill=factor(diasemana)) 
+
+# 3. histograma de frecuencias por mes
+qplot(dif,data=df, facets = mes ~ .,fill=factor(diasemana)) 
+
+# tabla grafica de frecuencias mes- dia semana
+qplot(dif,data=df, facets = mes ~ diasemana,fill=as.factor(diasemana)) 
+
+qplot(dif,data=df, facets = mes ~ diasemana,fill=as.factor(diasemana)) 
+
+#subconjunto<-subset(df,diasemana=2,select=c(dif,diasemana, mes))
+#qplot(dif,data=subconjunto,facets =  . ~ mes)
+
+qplot(dif,data=df,facets = . ~ diasemana)
+
+
+# grafico de cajas por mes
+#1. usando base system
+boxplot(df$dif ~ df$mes, ylimit=c(-8,8))
+abline(h=0)
+#2. Usando ggplot2
+qplot(mes,dif,data=df, geom="boxplot",fill=factor(mes))
+
+# grafico de cajas por diasemana
+qplot(diasemana,dif,data=df, geom="boxplot",fill=factor(diasemana))
+
+#creamos hisotgramas para cada dia de la semana y mes
+ggplot(df,aes(dif)) + geom_density(alpha=0.5, fill=3) 
+ggplot(df,aes(dif, fill=factor(mes))) + geom_density(alpha=0.5)
+ggplot(df,aes(dif, fill=factor(diasemana))) + geom_density(alpha=0.3) 
+
+```
+
+Vamos a hacer una funcion para buscar los días 1 de cada mes, y los ultimos días de mes cómo se comprota la acción.
+
+```{r}
+
+ggplot(df,aes(df$dif, fill=factor(df[df$dia==1,]))) + geom_density(alpha=0.5, fill=3)
+
+#a<-df[df$dia==1,]
+#hist(df$dif, col="skyblue", border=F)
+#hist(a$dif, add=T,col=scales::alpha('red',.5),border=F)
+
+#es el factor primer día del mes relevate?
+qplot(dif,data=df, geom="density",fill=factor(dia==1),alpha=0.5 )
+qplot(dif,data=df, geom="density",fill=factor(dia==1),alpha=0.5, facets = . ~ mes )
+
+```
+vemos que las graficas anteriore tienen un fallo, pues no selecciona correctamente los días, pues el día 1 puede ser fiesta.
+Una solucion puede ser usar el cambio en la variable mes para localizar el primer y ultimo día de este.
+```{r}
+difmes<-diff(mes)
+#añadimos una veriable que indica el primer día de mes
+df$dia1<-!difmes==0
+
+qplot(dif,data=df, geom="density",fill=factor(dia1==TRUE),alpha=0.5)
+qplot(dif,data=df, geom="density",fill=factor(dia1==TRUE),alpha=0.5, facets = mes ~. ) +
+  coord_cartesian( xlim=c(-5,5), ylim=c(0,0.5))
+
+#añadimos una variable que indica el ultimo día de mes
+#usamos un truco para hacer el lag hacia atrás
+df$ultdia<-c(df$dia1[-1],FALSE)
+qplot(dif,data=df, geom="density",fill=factor(ultdia==TRUE),alpha=0.5)
+qplot(dif,data=df, geom="density",fill=factor(ultdia==TRUE),alpha=0.5, facets = mes ~. ) +
+  coord_cartesian( xlim=c(-5,5),ylim=c(0,0.5)) +
+  geom_vline(xintercept = 0)
+
+
+# Comprobamos si hay diferencias en el caso del ultimo día de diciembre
+qplot(dif,data=df, geom="density",fill=factor(ultdia==TRUE & mes==12 ),alpha=0.5) +
+  coord_cartesian( xlim=c(-5,5),ylim=c(0,0.5)) +
+  geom_vline(xintercept = 0)
+
+qplot(dif,data=df, geom="density",fill=factor(dia1==TRUE & mes==12 ),alpha=0.5)+
+  coord_cartesian( xlim=c(-5,5),ylim=c(0,0.5)) + geom_vline(xintercept = 0)
+# pero hay pocos datos:
+df[which(df$dia1==TRUE & df$mes==12),]
+
+qplot(dif,data=df, geom="histogram",fill=factor(dia1==TRUE & mes==12 ),alpha=0.5)
+
+
+```
+
+

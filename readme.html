@@ -118,38 +118,103 @@ $(document).ready(function () {
 </div>
 
 
-<div id="leer-datos-de-bolsa" class="section level1">
-<h1>LEER DATOS DE BOLSA</h1>
-<p>Este proyecto intenta obtener las cotizaciones de una serie de valores y pintarlas en una grafica desde R.</p>
-<p>los datos son obtenidos principalmente de Yahoo finance, y se descargan y grafican en el entorno de R.</p>
-<p>son necesarias las librería siguientes:</p>
-<pre><code>#
-# library(&quot;tseries&quot;);
-# library(&quot;tseries&quot;);</code></pre>
-<ol style="list-style-type: decimal">
-<li>La caja de herramientas del cientÃfico de datos</li>
-<li>R Programming</li>
-<li>Getting and Cleaning Data</li>
-</ol>
-<ul>
-<li>4Exploratory Data Analysis</li>
-<li>5Reproducible Research</li>
-<li>Statistical Inference</li>
-<li>Regression Models</li>
-<li>Practical Machine Learning</li>
-<li>Developing Data Products</li>
-<li><p>Data Science Capstone</p></li>
-<li><strong>In a standard class</strong></li>
-<li>There are 30-100 people</li>
-<li>You raise your hand and ask a question</li>
-<li>The instructor responds</li>
-<li><strong>In a MOOC</strong></li>
-<li>There are almost 100,000 people</li>
-<li>You post a question to the message board</li>
-<li>Others vote on your questions</li>
-<li>Your instructor responds (as often as possible)</li>
-<li><p>Your peers respond (as often as possible)</p></li>
-</ul>
+<div id="r-trader" class="section level1">
+<h1>R TRADER</h1>
+<div id="proyecto-1.-compara-indices" class="section level2">
+<h2>PROYECTO 1. COMPARA INDICES</h2>
+<p>Este proyecto descarga los datos de una serie de indices y pinta una gráfica conjunta con la serie acumulada de datos desde una fecha concreta. Este grafico nos permite ver la evoluciçon relativa de los valores desde una determinada fecha.</p>
+<p>Lo pensé para ver la evolución de los indices desde el BREXIT.</p>
+</div>
+<div id="uso" class="section level2">
+<h2>USO</h2>
+<p>necesitamos poner en un fichero llamado valores.txt la serie de valores, indices o tickers que vamos a pintar.</p>
+<pre><code># Ejemplo de valores.txtx
+
+^GSPC,S&amp;P 500
+^DJI,Dow Jones Industrial Average
+^IXIC,NASDAQ Composite
+^NYA,NYSE COMPOSITE (DJ)
+^XAX,NYSE AMEX COMPOSITE INDEX
+^RUT,Russell 2000
+^FTSE,FTSE 100
+^GDAXI,DAX
+^FCHI,CAC 40
+</code></pre>
+<p>hecho esto ejecutamos el fichero de codigo R leedatos.r que continene lo siguiente: Esto lo podemos hacer con :</p>
+<p>source(“leedatos.r”)</p>
+<pre class="{r}"><code>Sys.Date()
+# Establece el directorio de trabajo
+setwd(&quot;C:/R/ibex/&quot;);
+
+#librerias necesarias
+#library(&quot;ggplot2&quot;, lib.loc=&quot;~/R/win-library/3.1&quot;);
+library(&quot;tseries&quot;);
+library(&quot;timeSeries&quot;);
+library(&quot;timeDate&quot;);
+library(&quot;dygraphs&quot;, lib.loc=&quot;~/R/win-library/3.1&quot;)
+library(&quot;zoo&quot;, lib.loc=&quot;~/R/win-library/3.3&quot;)
+library(&quot;ggplot2&quot;, lib.loc=&quot;~/R/win-library/3.3&quot;) 
+
+#lee tickers de un fichero y lo guarda en un data frame.
+#valoresIbex&lt;-read.table(&quot;ibex35.txt&quot;,header=TRUE,sep=&quot;,&quot;)
+valores&lt;-read.table(&quot;valores.txt&quot;,header=FALSE,sep=&quot;,&quot;);
+n &lt;-nrow(valores)
+valores;
+
+#funcion para leer los datos de la web de yahoo según el ticker
+yahoo.read &lt;- function(ticker,anos,compresion){
+  #anos&lt;- 1;años o días de datos desde el día de hoy. si no se multiplica por 365 son dias
+  #compresion= puede ser: d=dias w=semanas m=meses
+  acc &lt;- get.hist.quote(instrument= ticker, start= Sys.Date() - anos,end= Sys.Date(), quote=&quot;AdjClose&quot;,provider=&quot;yahoo&quot;, origin=&quot;1970-01-01&quot;, compression=as.character(compresion), retclass=&quot;zoo&quot;);
+  acc &lt;- acc[!is.na(acc)]; 
+  acc.title = ticker
+  #Calculamos la diferencia entre los valores de hoy y de ayer
+  difacc &lt;- diff(acc);
+  #Calculamos los porcentajes de la diferencia
+  dif100 &lt;-100*difacc/acc;
+  #calculo la serie acumulada
+  acumdif&lt;-cumsum(dif100);
+  return(acumdif)
+}
+
+#------
+anos&lt;-20;  #*365 dias
+compre&lt;-as.character(&quot;d&quot;);
+
+df&lt;- yahoo.read(valores[1,1],anos,compre);
+for (i in 2:n) {
+  acc&lt;- yahoo.read(valores[i,1],anos,compre);
+  names(acc)&lt;-as.character(valores[i,1]);
+  df&lt;-merge(df,acc);
+}
+
+for (i in 1:n) {
+  colnames(df)[i]=as.character(valores[i,1]);
+}
+
+#Uso autoplot() de zoo para pintar las grafias en lugar de ggplot2():
+#PERO HAY QUE CARGAR LA LIBRERÍA ggplot2
+autoplot(df, facets = NULL);
+
+#uso de dygraph para pintar las graficas
+dygraph(df, main = &quot;evolución desde el Brexit&quot;) %&gt;%
+  dyLegend(show = &quot;follow&quot;, hideOnMouseOut = TRUE);
+
+#ponemos un listado de los resultados
+x&lt;-df[nrow(df),];
+x=t(x);
+#x[order(x[,1]),];
+y&lt;-x[order(x[,1]),];
+#t(y);
+criterio&lt;- (y&gt;0);
+y[criterio];
+criterio&lt;- (y&lt;0);
+y[criterio];
+autoplot(df, facets = NULL)</code></pre>
+</div>
+<div id="section" class="section level2">
+<h2></h2>
+</div>
 </div>
 
 

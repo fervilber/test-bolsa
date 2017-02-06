@@ -8,6 +8,8 @@ library("tseries");
 library("timeSeries");
 library("timeDate");
 library("dygraphs", lib.loc="~/R/win-library/3.1")
+library("zoo", lib.loc="~/R/win-library/3.3")
+library("ggplot2", lib.loc="~/R/win-library/3.3") 
 
 #lee tickers de un fichero y lo guarda en un data frame.
 #valoresIbex<-read.table("ibex35.txt",header=TRUE,sep=",")
@@ -32,8 +34,8 @@ yahoo.read <- function(ticker,anos,compresion){
 }
 
 #------
-anos<-20;  #*365dias
-compre<-as.character("d");
+anos<-20;  #*365 dias
+compre<-as.character("d");# dias semana o año
 
 df<- yahoo.read(valores[1,1],anos,compre);
 for (i in 2:n) {
@@ -47,6 +49,7 @@ for (i in 1:n) {
 }
 
 #Uso autoplot() de zoo para pintar las grafias en lugar de ggplot2():
+#PERO HAY QUE CARGAR LA LIBRERÍA ggplot2
 autoplot(df, facets = NULL);
 
 #uso de dygraph para pintar las graficas
@@ -63,4 +66,4 @@ criterio<- (y>0);
 y[criterio];
 criterio<- (y<0);
 y[criterio];
-autoplot(df, facets = NULL);
+autoplot(df, facets = NULL)
