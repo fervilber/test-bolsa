@@ -24,7 +24,7 @@ Veamos como descargar los datos del IBEX 35 en los dos últimos años.
 library(tseries)
 library("zoo", lib.loc="~/R/win-library/3.3")
 
-ticker="^IBEX"
+ticker="TEF.MC" # "^IBEX"
 anos= 5*365 # en días si pongo star como fecha no hace falta
 #quote="AdjClose"
 #start= Sys.Date()-anos
@@ -92,10 +92,12 @@ Vamos a pintar las graficas por años
 ```
 
 
-## gráficos 
+## Gráficos 
 
 Con los datos de la serie almacenados en un dataframe, vamos a realizar varios gráficas exploratorios de los mismos:
 
+### Histogramas
+generamos unos histogramas de frecuencias
 ```{r graficas1}
 library(ggplot2)
 # 1. grafico de frecuencias de la serie de diferencias
@@ -109,7 +111,6 @@ qplot(dif,data=df, facets = mes ~ .,fill=factor(diasemana))
 
 # tabla grafica de frecuencias mes- dia semana
 qplot(dif,data=df, facets = mes ~ diasemana,fill=as.factor(diasemana)) 
-
 qplot(dif,data=df, facets = mes ~ diasemana,fill=as.factor(diasemana)) 
 
 #subconjunto<-subset(df,diasemana=2,select=c(dif,diasemana, mes))
@@ -117,23 +118,43 @@ qplot(dif,data=df, facets = mes ~ diasemana,fill=as.factor(diasemana))
 
 qplot(dif,data=df,facets = . ~ diasemana)
 
+#creamos histogramas para cada dia de la semana y mes
+ggplot(df,aes(dif)) + geom_density(alpha=0.5, fill=3) +
+  geom_vline(aes(xintercept=mean(dif, na.rm=T)), color="red", linetype="dashed", size=1)
 
+ggplot(df,aes(dif, fill=factor(mes))) + geom_density(alpha=0.5)
+ggplot(df,aes(dif, fill=factor(diasemana))) + geom_density(alpha=0.3) 
+
+
+```
+## Diagrama de cajas o boxplot
+estos graficos son muy interesantes, pues de un vistazo nos dan el rango medio de los valores y nos muestran los valores atípicos que sobresalen de los bigotes:
+
+```{r}
 # grafico de cajas por mes
 #1. usando base system
+boxplot(df$dif, ylimit=c(-8,8))
+
 boxplot(df$dif ~ df$mes, ylimit=c(-8,8))
 abline(h=0)
+abline(h=1,lty=3)
+abline(h=2,lty=3)
+
 #2. Usando ggplot2
 qplot(mes,dif,data=df, geom="boxplot",fill=factor(mes))
 
 # grafico de cajas por diasemana
-qplot(diasemana,dif,data=df, geom="boxplot",fill=factor(diasemana))
+plot1<-qplot(diasemana,dif,data=df, geom="boxplot",fill=factor(diasemana))
 
-#creamos hisotgramas para cada dia de la semana y mes
-ggplot(df,aes(dif)) + geom_density(alpha=0.5, fill=3) 
-ggplot(df,aes(dif, fill=factor(mes))) + geom_density(alpha=0.5)
-ggplot(df,aes(dif, fill=factor(diasemana))) + geom_density(alpha=0.3) 
+# quitar leyenda con guides(fill=FALSE)
+plot2<-ggplot(df, aes(x=mes, y=dif, fill=factor(mes))) + geom_boxplot() +
+    guides(fill=FALSE)+ coord_flip()
 
+install.packages("gridExtra")
+library(gridExtra)
+grid.arrange(plot1, plot2, nrow=1, ncol=2)
 ```
+
 
 Vamos a hacer una funcion para buscar los días 1 de cada mes, y los ultimos días de mes cómo se comprota la acción.
 
